@@ -1,0 +1,117 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  MediQueue — docker-compose.yml
+#
+#  One-command local demo:
+#    docker compose up --build
+#
+#  Services:
+#    postgres   → :5432
+#    redis      → :6379
+#    backend    → :5001  (Express + Socket.io + BullMQ workers)
+#    frontend   → :3000  (Next.js 16 PWA)
+#
+#  Data persists in the `postgres_data` volume between restarts.
+#  Run `docker compose down -v` to wipe everything and start fresh.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mediqueue
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mediqueue_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mediqueue"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Backend (Express API + Socket.io + BullMQ) ────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "5001"
+
+      # Database & cache
+      DATABASE_URL: postgres://postgres:mediqueue_local@postgres:5432/mediqueue
+      REDIS_URL: redis://redis:6379
+
+      # Auth — change these before any real deployment
+      JWT_SECRET: local_dev_jwt_secret_change_before_deploy
+      JWT_REFRESH_SECRET: local_dev_refresh_secret_change_before_deploy
+
+      # Seed demo data on first startup (idempotent — safe on restarts)
+      SEED_DEMO: "true"
+
+      # ── Optional integrations ────────────────────────────────────────────
+      # Leave blank to run locally without payment or notifications.
+      # The core queue features work without any of these.
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      RESEND_API_KEY: ""
+      RESEND_FROM_EMAIL: "noreply@mediqueue.app"
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+      VAPID_PUBLIC_KEY: ""
+      VAPID_PRIVATE_KEY: ""
+      VAPID_SUBJECT: "mailto:admin@mediqueue.app"
+
+    ports:
+      - "5001:5001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5001/health/live 2>/dev/null | grep -q ok || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # ── Frontend (Next.js 16 PWA) ─────────────────────────────────────────────
+  # NEXT_PUBLIC_* vars are baked in at build time. They point the browser
+  # at the backend — localhost works because the user's browser is on the
+  # host machine, not inside a container.
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5001
+        NEXT_PUBLIC_WS_URL: http://localhost:5001
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+    name: mediqueue_postgres_data
