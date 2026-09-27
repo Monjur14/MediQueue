@@ -3,7 +3,7 @@ import withPWAInit from 'next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',          // service worker output — sw.js lands in /public
-  register: true,          // auto-register SW on page load
+  register: false,          // SW registered manually after login (see store/auth.store.ts)
   skipWaiting: true,       // new SW activates immediately, no waiting
   disable: process.env.NODE_ENV === 'development', // no SW in dev (avoids cache confusion)
   buildExcludes: [/middleware-manifest\.json$/],   // known next-pwa + Next 13+ fix

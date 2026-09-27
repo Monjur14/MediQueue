@@ -1,7 +1,16 @@
 import "dotenv/config";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazily initialised — avoids crashing at startup when RESEND_API_KEY is blank.
+function getResend(): Resend {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    throw new Error(
+      "RESEND_API_KEY is not set. Email sending is unavailable."
+    );
+  }
+  return new Resend(key);
+}
 
 export const emailUtil = {
   async sendDoctorInvitation(data: {
@@ -10,10 +19,9 @@ export const emailUtil = {
     setupToken: string;
     clinicName: string;
   }) {
-    // Frontend URL for setting up password, you might want to make this configurable based on your environment
-    const setupLink = `http://localhost:3000/setup-password?token=${data.setupToken}`;
+    const setupLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/setup-password?token=${data.setupToken}`;
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: process.env.RESEND_FROM_EMAIL!,
       to: data.to,
       subject: `You have been invited to join ${data.clinicName}`,

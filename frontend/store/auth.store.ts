@@ -23,6 +23,16 @@ function normalizeUser(raw: Record<string, unknown>): User {
   };
 }
 
+/** Register the service worker after login so the PWA install prompt
+ *  (and the "Apps on device" permission) only fires for authenticated users. */
+function registerServiceWorker() {
+  if (typeof window === 'undefined') return;
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('/sw.js').catch(() => {
+    // SW registration is non-critical — silently ignore failures.
+  });
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: null,
@@ -33,6 +43,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.setItem('refreshToken', tokens.refreshToken);
     const user = normalizeUser(tokens.user as unknown as Record<string, unknown>);
     set({ user, accessToken: tokens.accessToken });
+    registerServiceWorker();
   },
 
   logout: async () => {
@@ -40,6 +51,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       await api.post('/auth/logout');
     } catch {
       // silent — clear local state regardless
+    }
+    // Unregister SW on logout so the install prompt resets for the next user.
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      await reg?.unregister();
     }
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -67,6 +83,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // interceptor may have silently swapped in a new access token.
       const currentToken = localStorage.getItem('accessToken') ?? token;
       set({ user, accessToken: currentToken, isLoading: false });
+      registerServiceWorker();
     } catch {
       // Only reaches here when both the access token AND the refresh token
       // are invalid/expired. Clear everything and let the user log in again.
