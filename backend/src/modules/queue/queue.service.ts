@@ -53,7 +53,7 @@ export const queueService = {
     const session = await queueRepository.openSession({
       tenant_id: tenantId,
       doctor_id: input.doctor_id,
-      department_id: input.department_id,
+      ...(input.department_id !== undefined ? { department_id: input.department_id } : {}),
       session_date: input.session_date,
       max_tokens: input.max_tokens,
     });

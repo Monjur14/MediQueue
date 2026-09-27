@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import type { Request, Response, NextFunction } from 'express';
 import { pool } from '../config/database.js';
 
@@ -21,16 +22,21 @@ export const resolveTenant = async (
   res: Response,
   next: NextFunction,
 ) => {
-  let client: Awaited<ReturnType<typeof pool.connect>> | null = null;
+  // Kept as a let so the catch block can release if connect() itself throws
+  // after partially running (rare, but safe).
+  let client: PoolClient | null = null;
 
   try {
-    client = await pool.connect();
+    // Use a const so TypeScript can narrow the type cleanly without
+    // being confused by the mutable `client` variable captured in closures.
+    const c = await pool.connect();
+    client = c;
 
     // Attach to the request so repositories can use it
-    (req as any).dbClient = client;
+    (req as any).dbClient = c;
 
     if (req.user) {
-      await client.query(
+      await c.query(
         `SELECT
           set_config('app.current_tenant_id', $1, TRUE),
           set_config('app.current_user_id',   $2, TRUE),
@@ -45,7 +51,7 @@ export const resolveTenant = async (
     const releaseOnce = () => {
       if (!released) {
         released = true;
-        client?.release();
+        c.release();
       }
     };
 

@@ -16,7 +16,7 @@ export const billingController = {
   /** GET /api/billing/subscription  — authenticated tenant */
   async getSubscription(req: Request, res: Response) {
     try {
-      const tenantId = req.user!.tenantId;
+      const tenantId = req.user!.tenantId!;
       const subscription = await billingService.getSubscription(tenantId);
       res.json({ subscription });
     } catch (err) {
@@ -28,7 +28,7 @@ export const billingController = {
   /** POST /api/billing/checkout  — authenticated tenant */
   async createCheckout(req: Request, res: Response) {
     try {
-      const tenantId = req.user!.tenantId;
+      const tenantId = req.user!.tenantId!;
       const { plan } = req.body as { plan?: string };
       if (!plan) {
         return res.status(400).json({ message: 'plan is required' });
@@ -48,7 +48,7 @@ export const billingController = {
   /** POST /api/billing/portal  — authenticated tenant */
   async createPortal(req: Request, res: Response) {
     try {
-      const tenantId = req.user!.tenantId;
+      const tenantId = req.user!.tenantId!;
       const result = await billingService.createPortalSession(tenantId);
       res.json(result);
     } catch (err: unknown) {

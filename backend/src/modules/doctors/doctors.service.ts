@@ -17,7 +17,7 @@ export const doctorsService = {
       tenantId,
       full_name: input.full_name,
       email: input.email,
-      phone: input.phone,
+      ...(input.phone !== undefined ? { phone: input.phone } : {}),
       password_hash,
     });
   },

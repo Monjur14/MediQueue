@@ -36,7 +36,7 @@ export const billingService = {
     if (!customerId) {
       const email = await billingRepository.getTenantEmail(tenantId);
       const customer = await stripe.customers.create({
-        email: email ?? undefined,
+        ...(email != null ? { email } : {}),
         metadata: { tenant_id: tenantId },
       });
       customerId = customer.id;
@@ -208,11 +208,12 @@ async function handleStripeEvent(event: Stripe.Event) {
     }
 
     case 'invoice.payment_succeeded': {
-      const inv = event.data.object as Stripe.Invoice;
-      // subscription is string | Stripe.Subscription | null depending on expansion
-      const subId = typeof inv.subscription === 'string'
-        ? inv.subscription
-        : (inv.subscription as Stripe.Subscription | null)?.id;
+      // Cast to any: Stripe dahlia API moved subscription off Invoice root type
+      const inv = event.data.object as any;
+      const subId: string | undefined =
+        typeof inv.subscription === 'string'
+          ? (inv.subscription as string)
+          : (inv.subscription as Stripe.Subscription | null)?.id ?? undefined;
       if (subId) {
         await billingRepository.updateSubscriptionStatus(subId, 'active');
         // Cancel any pending grace-period expiry — tenant paid in time
@@ -222,10 +223,11 @@ async function handleStripeEvent(event: Stripe.Event) {
     }
 
     case 'invoice.payment_failed': {
-      const inv = event.data.object as Stripe.Invoice;
-      const subId = typeof inv.subscription === 'string'
-        ? inv.subscription
-        : (inv.subscription as Stripe.Subscription | null)?.id;
+      const inv = event.data.object as any;
+      const subId: string | undefined =
+        typeof inv.subscription === 'string'
+          ? (inv.subscription as string)
+          : (inv.subscription as Stripe.Subscription | null)?.id ?? undefined;
       if (subId) {
         await billingRepository.updateSubscriptionStatus(subId, 'past_due');
         // Schedule grace-period expiry — tenant has 7 days to pay before lock
