@@ -30,7 +30,7 @@ function Banner({ token }: Props) {
     return (
       <div role="alert" className="flex items-start gap-3 bg-mq-accent px-4 py-4 text-white">
         <BellRing className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={1.75} />
-        <p className="text-base font-medium">It's your turn. Please go to Dr. {token.doctor_name} now.</p>
+        <p className="text-base font-medium">It&apos;s your turn. Please go to Dr. {token.doctor_name} now.</p>
       </div>
     );
   }
@@ -57,7 +57,7 @@ function Banner({ token }: Props) {
     return (
       <div role="status" className="flex items-start gap-3 border-b border-mq-line px-4 py-4 text-mq-muted">
         <DoorClosed className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={1.75} />
-        <p className="text-sm">The clinic has closed today's queue.</p>
+        <p className="text-sm">The clinic has closed today&apos;s queue.</p>
       </div>
     );
   }

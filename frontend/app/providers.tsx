@@ -42,6 +42,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     hydrateFromStorage();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, [hydrateFromStorage]);
 

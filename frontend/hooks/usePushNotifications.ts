@@ -55,6 +55,7 @@ export function usePushNotifications() {
 
   // Detect browser support on mount (client-only APIs).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSupport(readSupport());
   }, []);
 
@@ -69,6 +70,7 @@ export function usePushNotifications() {
     // Dev mode: no SW — read Notification.permission synchronously so StrictMode's
     // double-invoke can't cancel the state update via the cancelled flag.
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState(
         Notification.permission === 'denied' ? 'denied' :
         Notification.permission === 'granted' ? 'on' : 'off'
