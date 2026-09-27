@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+  <!-- mq-accent background -->
+  <rect width="20" height="20" fill="#0F5257"/>
+  <!-- vertical bar: w-0.75(3px) wide, inset-y-1(4px) top+bottom -->
+  <rect x="8.5" y="4" width="3" height="12" fill="white"/>
+  <!-- horizontal bar: h-0.75(3px) tall, inset-x-1(4px) left+right -->
+  <rect x="4" y="8.5" width="12" height="3" fill="white"/>
+</svg>

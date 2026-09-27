@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+/* MediQueue design system tokens — see DESIGN.md */
+@theme inline {
+  --font-sans: var(--font-mq-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mq-mono), ui-monospace, monospace;
+}
+
+@theme {
+  --color-mq-ground: #FAFAF8;
+  --color-mq-ink: #0B0F0E;
+  --color-mq-muted: #5B6361;
+  --color-mq-subtle: #8A918F;
+  --color-mq-line: #E3E5E3;
+  --color-mq-accent: #0F5257;
+  --color-mq-tint: #E8F0EF;
+  --color-mq-danger: #B42318;
+}
+
+/* Default input colors. In the base layer so utility classes (e.g. read-only fields) can override them. */
+@layer base {
+  input, textarea, select {
+    color: var(--color-mq-ink);
+    background-color: #ffffff;
+  }
+}
+
+/* Hide the scrollbar on horizontally scrolling tab rows; they still scroll by touch, wheel and keyboard. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

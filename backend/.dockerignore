@@ -1,0 +1,25 @@
+# Dependencies — reinstalled inside image
+node_modules/
+
+# Build output — rebuilt inside image
+dist/
+*.tsbuildinfo
+
+# Secrets — never ship into image
+.env
+.env.*
+
+# Dev artifacts
+*.log
+coverage/
+.nyc_output/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Docker (avoid recursive context)
+Dockerfile
+.dockerignore

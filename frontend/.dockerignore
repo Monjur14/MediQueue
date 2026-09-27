@@ -1,0 +1,28 @@
+# Dependencies — reinstalled inside image
+node_modules/
+
+# Build output — rebuilt inside image
+.next/
+out/
+
+# Secrets — never ship into image
+.env
+.env.*
+.env.local
+
+# PWA service worker output (regenerated on build)
+public/sw.js
+public/workbox-*.js
+
+# Dev artifacts
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Docker
+Dockerfile
+.dockerignore

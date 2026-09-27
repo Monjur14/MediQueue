@@ -1,0 +1,89 @@
+'use client';
+
+/**
+ * WebSocket hook for real-time queue updates.
+ * Joins a session room and invalidates TanStack Query cache on queue events.
+ *
+ * Invalidation strategy:
+ *   - Queue action events (token_called, skipped, etc.) → invalidate the session
+ *     token list, today's sessions, AND the patient's own active token.
+ *     The called patient is removed from the waiting list so they never
+ *     receive an eta_update (which only targets still-waiting patients).
+ *     Without this, patient #2 would never see "Your turn!" without a reload.
+ *   - eta_update events → additionally invalidate the patient's active token
+ *     so remaining waiting patients get updated position + ETA counts.
+ *
+ * refetchOnWindowFocus is turned OFF on live queue hooks because WebSocket
+ * already delivers freshness signals — no need to hammer the API on tab focus.
+ */
+import { useEffect, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { useQueryClient } from '@tanstack/react-query';
+
+const WS_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? 'http://localhost:5001';
+
+export function useQueueSocket(
+  sessionId: string | null,
+  accessToken?: string | null,
+) {
+  const queryClient = useQueryClient();
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const socket = io(WS_URL, {
+      transports: ['websocket', 'polling'],
+      autoConnect: true,
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      socket.emit('join:session', {
+        sessionId,
+        token: accessToken ?? undefined,
+      });
+    });
+
+    // Invalidate session-level queries on real queue state changes.
+    // MUST include ['queue', 'my-active-token'] because the called patient
+    // is removed from the waiting list and never receives an eta_update
+    // (which only targets still-waiting patients). Without this, the patient
+    // whose token was just called would never see "Your turn!" without a reload.
+    const invalidateSession = () => {
+      queryClient.invalidateQueries({
+        queryKey: ['queue', 'session', sessionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['queue', 'my-active-token'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['queue', 'sessions', 'today'],
+      });
+    };
+
+    socket.on('queue:token_called',    invalidateSession);
+    socket.on('queue:token_checkin',   invalidateSession);
+    socket.on('queue:token_skipped',   invalidateSession);
+    socket.on('queue:token_completed', invalidateSession);
+    socket.on('queue:token_issued',    invalidateSession);
+    socket.on('queue:session_closed',  invalidateSession);
+    socket.on('queue:break_started',   invalidateSession);
+    socket.on('queue:break_ended',     invalidateSession);
+    socket.on('queue:session_reopened', invalidateSession);
+
+    // ETA update — the backend calculates per-patient positions and emits
+    // this to each patient's personal room (patient:<userId>). Only
+    // the patient's own active token needs to refresh, not the full token list.
+    socket.on('queue:eta_update', () => {
+      queryClient.invalidateQueries({ queryKey: ['queue', 'my-active-token'] });
+      queryClient.invalidateQueries({ queryKey: ['queue', 'session', sessionId, 'my-token'] });
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [sessionId, accessToken, queryClient]);
+}
