@@ -25,7 +25,25 @@ import { setupSwagger } from './config/swagger.js';
 const app = express();
 
 app.use(morgan("dev"));
-app.use(cors());
+const allowedOrigins = [
+  "https://mediqueue.monjurhossen.online",
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow requests with no origin (e.g. curl, mobile apps)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Tenant-ID"],
+  })
+);
 app.use(helmet());
 // Stripe webhook needs raw body — mount BEFORE express.json()
 app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));

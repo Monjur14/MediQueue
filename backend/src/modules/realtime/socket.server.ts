@@ -14,10 +14,20 @@ export const initSocketServer = (app: Express) => {
   const pubClient = redis;
   const subClient = redis.duplicate();
 
+  const allowedOrigins = [
+    process.env.FRONTEND_URL ?? "https://mediqueue.monjurhossen.online",
+    "http://localhost:3000",
+    "http://localhost:3001",
+  ].filter(Boolean) as string[];
+
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL,
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error(`Socket CORS: origin ${origin} not allowed`));
+      },
       methods: ['GET', 'POST'],
+      credentials: true,
     },
   });
 

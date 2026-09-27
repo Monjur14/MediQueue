@@ -1,22 +1,5 @@
-# ─────────────────────────────────────────────────────────────────────────────
-#  MediQueue — docker-compose.yml
-#
-#  One-command local demo:
-#    docker compose up --build
-#
-#  Services:
-#    postgres   → :5432
-#    redis      → :6379
-#    backend    → :5001  (Express + Socket.io + BullMQ workers)
-#    frontend   → :3000  (Next.js 16 PWA)
-#
-#  Data persists in the `postgres_data` volume between restarts.
-#  Run `docker compose down -v` to wipe everything and start fresh.
-# ─────────────────────────────────────────────────────────────────────────────
-
 services:
 
-  # ── PostgreSQL ────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -35,7 +18,6 @@ services:
       retries: 5
       start_period: 20s
 
-  # ── Redis ─────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -47,7 +29,6 @@ services:
       timeout: 3s
       retries: 10
 
-  # ── Backend (Express API + Socket.io + BullMQ) ────────────────────────────
   backend:
     build:
       context: ./backend
@@ -58,33 +39,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    env_file:
+      - ./backend/.env          # loads RESEND, STRIPE, JWT, VAPID from .env
     environment:
       NODE_ENV: production
       PORT: "5001"
-
-      # Database & cache
       DATABASE_URL: postgres://postgres:mediqueue_local@postgres:5432/mediqueue
       REDIS_URL: redis://redis:6379
-
-      # Auth — change these before any real deployment
-      JWT_SECRET: local_dev_jwt_secret_change_before_deploy
-      JWT_REFRESH_SECRET: local_dev_refresh_secret_change_before_deploy
-
-      # Seed demo data on first startup (idempotent — safe on restarts)
+      NEXT_PUBLIC_APP_URL: "https://mediqueue.monjurhossen.online"
       SEED_DEMO: "true"
-
-      # ── Optional integrations ────────────────────────────────────────────
-      # Leave blank to run locally without payment or notifications.
-      # The core queue features work without any of these.
-      STRIPE_SECRET_KEY: ""
-      STRIPE_WEBHOOK_SECRET: ""
-      RESEND_API_KEY: ""
-      RESEND_FROM_EMAIL: "noreply@mediqueue.app"
-      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
-      VAPID_PUBLIC_KEY: ""
-      VAPID_PRIVATE_KEY: ""
-      VAPID_SUBJECT: "mailto:admin@mediqueue.app"
-
+      FRONTEND_URL: "https://mediqueue.monjurhossen.online"
+      # DATABASE_URL here overrides the one in .env (needed to use docker service name)
     ports:
       - "5001:5001"
     healthcheck:
@@ -94,17 +59,13 @@ services:
       retries: 5
       start_period: 40s
 
-  # ── Frontend (Next.js 16 PWA) ─────────────────────────────────────────────
-  # NEXT_PUBLIC_* vars are baked in at build time. They point the browser
-  # at the backend — localhost works because the user's browser is on the
-  # host machine, not inside a container.
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:5001
-        NEXT_PUBLIC_WS_URL: http://localhost:5001
+        NEXT_PUBLIC_API_URL: https://mediqueue-api.monjurhossen.online
+        NEXT_PUBLIC_WS_URL: https://mediqueue-api.monjurhossen.online
     restart: unless-stopped
     depends_on:
       backend:
