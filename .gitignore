@@ -92,3 +92,4 @@ desktop.ini
 _delete_me/
 Claude outputs/
 Claude Outputs/
+.env.prod
