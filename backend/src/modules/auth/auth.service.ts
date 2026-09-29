@@ -170,15 +170,35 @@ export const authService = {
   },
 
   async refresh(input: RefreshInput) {
+    // 1. Look up the user by the incoming refresh token
+    //    findByRefreshToken also checks expiry (refresh_token_expires_at > NOW())
     const user = await authRepository.findByRefreshToken(input.refresh_token);
-    if (!user) throw new Error("INVALID_REFRESH_TOKEN");
 
+    if (!user) {
+      // Token not found in DB — it was either:
+      //   a) already rotated (single-use enforced), OR
+      //   b) expired / logged out
+      // Either way: reject. If we wanted full token-family tracking we could
+      // detect (a) specifically and nuke all sessions, but DB-not-found is
+      // sufficient to stop replay attacks.
+      throw new Error("INVALID_REFRESH_TOKEN");
+    }
+
+    // 2. Issue a new short-lived access token
     const accessToken = jwtUtil.generateAccessToken({
-      userId: user.id,
-      role: user.role,
+      userId:   user.id,
+      role:     user.role,
       tenantId: user.tenant_id ?? null,
     });
-    return { accessToken };
+
+    // 3. Rotate — generate a new refresh token and atomically replace the old one.
+    //    After this point the incoming token is dead; any replay gets INVALID_REFRESH_TOKEN.
+    const newRefreshToken = jwtUtil.generateRefreshToken({ userId: user.id });
+    const newExpiresAt    = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await authRepository.rotateRefreshToken(user.id, newRefreshToken, newExpiresAt);
+
+    return { accessToken, refreshToken: newRefreshToken };
   },
 
   async logout(userId: string) {

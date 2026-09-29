@@ -176,4 +176,27 @@ export const authRepository = {
       [userId],
     );
   },
+
+  async rotateRefreshToken(
+    userId: string,
+    newToken: string,
+    newExpiresAt: Date,
+  ) {
+    await pool.query(
+      `UPDATE users
+       SET refresh_token            = $1,
+           refresh_token_expires_at = $2
+       WHERE id = $3`,
+      [newToken, newExpiresAt, userId],
+    );
+  },
+
+  async clearAllRefreshTokens(userId: string) {
+    await pool.query(
+      `UPDATE users
+       SET refresh_token = NULL, refresh_token_expires_at = NULL
+       WHERE id = $1`,
+      [userId],
+    );
+  },
 };
