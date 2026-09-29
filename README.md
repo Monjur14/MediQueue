@@ -10,7 +10,6 @@
 ![Node](https://img.shields.io/badge/Node.js-20-339933?logo=node.js&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20+%20RLS-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-green)
 
 [Live Demo](https://mediqueue.monjurhossen.online) · [API Docs](https://mediqueue-api.monjurhossen.online/api/docs) · [Architecture](#architecture) · [Engineering Notes](#engineering-deep-dives)
 
@@ -537,8 +536,4 @@ cd backend && npm run test:all
 
 **Monjur Hossen** — [GitHub](https://github.com/Monjur14) · [Portfolio](https://monjurhossen.online)
 
----
 
-## License
-
-[MIT](LICENSE)
