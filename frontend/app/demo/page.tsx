@@ -5,7 +5,7 @@ import { FinalCta } from '@/components/home/FinalCta';
 import { DemoPage } from '@/components/demo/DemoPage';
 
 export const metadata: Metadata = {
-  title: 'Live demo · MediQueue',
+  title: 'Live demo',
   description: 'Give a token, run the queue as the doctor and watch the patient’s phone update. An interactive MediQueue demo.',
 };
 

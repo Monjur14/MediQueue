@@ -1,33 +1,28 @@
-'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore, getRoleDashboard } from '@/store/auth.store';
+import type { Metadata } from 'next';
 import { HomePage } from '@/components/home/HomePage';
+import { AuthRedirect } from '@/components/home/AuthRedirect';
 
+export const metadata: Metadata = {
+  title: { absolute: 'MediQueue — Smart Hospital Queue' },
+  description:
+    'Live hospital queue management for clinics in Bangladesh. Patients track their place in line for free.',
+  alternates: { canonical: '/' },
+};
+
+/**
+ * Root page — server component.
+ *
+ * <HomePage /> is server-rendered so Googlebot receives the full landing page
+ * in the initial HTML response, with no JavaScript required.
+ *
+ * <AuthRedirect /> is an invisible client component that runs after hydration
+ * and quietly sends logged-in users to their role dashboard.
+ */
 export default function RootPage() {
-  const router  = useRouter();
-  const user    = useAuthStore((s) => s.user);
-  const loading = useAuthStore((s) => s.isLoading);
-
-  // Logged-in users skip the landing page and go straight to their dashboard
-  useEffect(() => {
-    if (!loading && user) router.replace(getRoleDashboard(user.role));
-  }, [user, loading, router]);
-
-  if (loading || user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex items-center gap-3 text-gray-500">
-          <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          Loading…
-        </div>
-      </div>
-    );
-  }
-
-  return <HomePage />;
+  return (
+    <>
+      <AuthRedirect />
+      <HomePage />
+    </>
+  );
 }

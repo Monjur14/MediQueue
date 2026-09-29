@@ -6,7 +6,7 @@ import { Logo } from '@/components/shared/Logo';
 import { Container, EASE } from '@/components/shared/primitives';
 
 export const metadata: Metadata = {
-  title: 'MediQueue — Account',
+  title: { absolute: 'MediQueue — Account' },
 };
 
 /** Shared shell for login, register and setup password: form left, role panel right (lg+). */
