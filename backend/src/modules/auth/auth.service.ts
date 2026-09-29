@@ -170,18 +170,45 @@ export const authService = {
   },
 
   async refresh(input: RefreshInput) {
-    // 1. Look up the user by the incoming refresh token
-    //    findByRefreshToken also checks expiry (refresh_token_expires_at > NOW())
+    // 1. Look up the user by the incoming refresh token.
+    //    findByRefreshToken also checks expiry (refresh_token_expires_at > NOW()).
     const user = await authRepository.findByRefreshToken(input.refresh_token);
 
     if (!user) {
-      // Token not found in DB — it was either:
-      //   a) already rotated (single-use enforced), OR
-      //   b) expired / logged out
-      // Either way: reject. If we wanted full token-family tracking we could
-      // detect (a) specifically and nuke all sessions, but DB-not-found is
-      // sufficient to stop replay attacks.
-      throw new Error("INVALID_REFRESH_TOKEN");
+      // ── STOLEN TOKEN DETECTION ──────────────────────────────────────────
+      // The token is not in the database. Three possibilities:
+      //   a) it never existed / was tampered with  → signature will fail
+      //   b) it expired or the user logged out     → signature valid, but so is this
+      //   c) it was ALREADY ROTATED and is now being replayed → THEFT
+      //
+      // We can tell (a) apart from (b)/(c) by verifying the signature: if WE
+      // minted this token, the signature holds even though the row is gone.
+      // A validly-signed token that is absent from the DB means someone is
+      // replaying a token that has already been used once — the classic
+      // signature of a stolen refresh token.
+      //
+      // Response: revoke every session for that user. The attacker is locked
+      // out, and the legitimate user is forced to re-authenticate — which is
+      // exactly what you want when a token has leaked.
+      try {
+        const payload = jwtUtil.verifyRefreshToken(input.refresh_token);
+
+        // Signature is valid but the token is not in the DB → replay detected.
+        await authRepository.clearAllRefreshTokens(payload.userId);
+
+        console.warn(
+          `[SECURITY] Refresh token reuse detected for user ${payload.userId}. ` +
+          `All sessions revoked.`,
+        );
+
+        throw new Error("TOKEN_REUSE_DETECTED");
+      } catch (err: any) {
+        // Re-throw our own signal; anything else means the signature itself
+        // was invalid (forged or corrupted token) → plain rejection.
+        if (err.message === "TOKEN_REUSE_DETECTED") throw err;
+        throw new Error("INVALID_REFRESH_TOKEN");
+      }
+      // ────────────────────────────────────────────────────────────────────
     }
 
     // 2. Issue a new short-lived access token

@@ -135,6 +135,15 @@ export const authController = {
       const result = await authService.refresh(parsed.data);
       return res.status(200).json(result);
     } catch (err: any) {
+      if (err.message === "TOKEN_REUSE_DETECTED") {
+        // A already-rotated token was replayed — all sessions for that user
+        // have been revoked. Tell the client to force a full re-login.
+        return res.status(401).json({
+          message:
+            "Security alert: this session has been terminated. Please log in again.",
+          code: "TOKEN_REUSE_DETECTED",
+        });
+      }
       if (err.message === "INVALID_REFRESH_TOKEN") {
         return res
           .status(401)
